@@ -1,5 +1,5 @@
 #!/bin/bash 
-auto(){
+findrtl(){
   eval parsed_path=$1
   echo "reading $parsed_path"
   while IFS= read -r line; do
@@ -17,6 +17,11 @@ auto(){
       echo "$line" >> $2
     fi
   done < <(find $parsed_path -path "*/rtl/*.sv")
+}
+auto(){
+  findrtl $1 $2
+  eval parsed_path=$1
+  echo "reading $parsed_path"
   while IFS= read -r line; do
     if [[ -n $line ]]; then
       echo "$line" >> $2
@@ -152,6 +157,10 @@ if [[ "$#" -eq 3 && "${1,,}" == "auto" ]]; then
   echo '' > $3
   auto $2 $3
   sed -i '/^[[:space:]]*$/d' $3
+elif [[ "$#" -eq 3 && "${1,,}" == "findrtl" ]]; then
+  echo '' > $3
+  findrtl $2 $3
+  sed -i '/^[[:space:]]*$/d' $3
 elif [[ "$#" -eq 4 && "${1,,}" == "split" ]]; then
   echo '' > $3
   echo '' > $4
@@ -176,10 +185,11 @@ elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
   sed -i '/^[[:space:]]*$/d' $4
 else
   echo "filelist  "
-  echo "    auto     <root directory>       <output file list>                                   "
-  echo "    split    <input file list>      <output file list>            <output include list>  "
-  echo "    vivado   <input file list>      <output vivado read tcl>                             "
-  echo "    quartus  <input file list>      <output quartus read tcl>                            "
-  echo "    yosys    <input file list>      <output yosys read script>                           "
-  echo "    merge    <input include list>   <input file list>             <output file list>     "
+  echo "    auto       <root directory>       <output file list>                                   "
+  echo "    findrtl    <root directory>       <output file list>                                   "
+  echo "    split      <input file list>      <output file list>            <output include list>  "
+  echo "    vivado     <input file list>      <output vivado read tcl>                             "
+  echo "    quartus    <input file list>      <output quartus read tcl>                            "
+  echo "    yosys      <input file list>      <output yosys read script>                           "
+  echo "    merge      <input include list>   <input file list>             <output file list>     "
 fi
