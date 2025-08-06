@@ -11,12 +11,22 @@ auto(){
     if [[ -n $line ]]; then
       echo "$line" >> $2
     fi
-  done < <(find $parsed_path -path "*/rtl/*")
+  done < <(find $parsed_path -path "*/rtl/*.v")
   while IFS= read -r line; do
     if [[ -n $line ]]; then
       echo "$line" >> $2
     fi
-  done < <(find $parsed_path -path "*/tb/*")
+  done < <(find $parsed_path -path "*/rtl/*.sv")
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "$line" >> $2
+    fi
+  done < <(find $parsed_path -path "*/tb/*.v")
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "$line" >> $2
+    fi
+  done < <(find $parsed_path -path "*/tb/*.sv")
 }
 split(){
   eval parsed_path=$1
