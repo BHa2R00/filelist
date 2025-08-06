@@ -91,6 +91,22 @@ file2yosys(){
     fi
   done < <(cat $parsed_path)
 }
+merge(){
+  eval parsed_path=$1
+  echo "reading $parsed_path"
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "+incdir+$line" >> $3
+    fi
+  done < <(cat $parsed_path)
+  eval parsed_path=$2
+  echo "reading $parsed_path"
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+        echo "$line" >> $3
+    fi
+  done < <(cat $parsed_path)
+}
 if [[ "$#" -eq 4 && "${1,,}" == "split" ]]; then
   echo '' > $3
   echo '' > $4
@@ -109,10 +125,15 @@ elif [[ "$#" -eq 3 && "${1,,}" == "yosys" ]]; then
   echo '' > $3
   file2yosys $2 $3
   sed -i '/^[[:space:]]*$/d' $3
+elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
+  echo '' > $4
+  merge $2 $3 $4
+  sed -i '/^[[:space:]]*$/d' $4
 else
   echo "filelist  "
   echo "    split    <input file list>   <output file list>            <output include list>  "
   echo "    vivado   <input file list>   <output vivado read tcl>                             "
   echo "    quartus  <input file list>   <output quartus read tcl>                            "
   echo "    yosys    <input file list>   <output yosys read script>                           "
+  echo "    merge    <input file list>   <input include list>          <output file list>     "
 fi
