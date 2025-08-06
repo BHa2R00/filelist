@@ -95,15 +95,27 @@ merge(){
   eval parsed_path=$1
   echo "reading $parsed_path"
   while IFS= read -r line; do
-    if [[ -n $line ]]; then
-      echo "+incdir+$line" >> $3
+    if [[ "$line" =~ ^-f ]] 
+    then
+      line=${line#*-f}
+      merge $1 $line $3
+    else
+      if [[ -n $line ]]; then
+        echo "+incdir+$line" >> $3
+      fi
     fi
   done < <(cat $parsed_path)
   eval parsed_path=$2
   echo "reading $parsed_path"
   while IFS= read -r line; do
-    if [[ -n $line ]]; then
+    if [[ "$line" =~ ^-f ]] 
+    then
+      line=${line#*-f}
+      merge $1 $line $3
+    else
+      if [[ -n $line ]]; then
         echo "$line" >> $3
+      fi
     fi
   done < <(cat $parsed_path)
 }
@@ -131,9 +143,9 @@ elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
   sed -i '/^[[:space:]]*$/d' $4
 else
   echo "filelist  "
-  echo "    split    <input file list>   <output file list>            <output include list>  "
-  echo "    vivado   <input file list>   <output vivado read tcl>                             "
-  echo "    quartus  <input file list>   <output quartus read tcl>                            "
-  echo "    yosys    <input file list>   <output yosys read script>                           "
-  echo "    merge    <input file list>   <input include list>          <output file list>     "
+  echo "    split    <input file list>      <output file list>            <output include list>  "
+  echo "    vivado   <input file list>      <output vivado read tcl>                             "
+  echo "    quartus  <input file list>      <output quartus read tcl>                            "
+  echo "    yosys    <input file list>      <output yosys read script>                           "
+  echo "    merge    <input include list>   <input file list>             <output file list>     "
 fi
