@@ -1,4 +1,23 @@
 #!/bin/bash 
+auto(){
+  eval parsed_path=$1
+  echo "reading $parsed_path"
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "+incdir+$line" >> $2
+    fi
+  done < <(find $parsed_path -path "*/inc")
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "$line" >> $2
+    fi
+  done < <(find $parsed_path -path "*/rtl/*")
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      echo "$line" >> $2
+    fi
+  done < <(find $parsed_path -path "*/tb/*")
+}
 split(){
   eval parsed_path=$1
   echo "reading $parsed_path"
@@ -119,7 +138,11 @@ merge(){
     fi
   done < <(cat $parsed_path)
 }
-if [[ "$#" -eq 4 && "${1,,}" == "split" ]]; then
+if [[ "$#" -eq 3 && "${1,,}" == "auto" ]]; then
+  echo '' > $3
+  auto $2 $3
+  sed -i '/^[[:space:]]*$/d' $3
+elif [[ "$#" -eq 4 && "${1,,}" == "split" ]]; then
   echo '' > $3
   echo '' > $4
   split $2 $3 $4
@@ -143,6 +166,7 @@ elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
   sed -i '/^[[:space:]]*$/d' $4
 else
   echo "filelist  "
+  echo "    auto     <root directory>       <output file list>                                   "
   echo "    split    <input file list>      <output file list>            <output include list>  "
   echo "    vivado   <input file list>      <output vivado read tcl>                             "
   echo "    quartus  <input file list>      <output quartus read tcl>                            "
