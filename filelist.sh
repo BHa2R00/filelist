@@ -153,6 +153,19 @@ merge(){
     fi
   done < <(cat $parsed_path)
 }
+synopsys_setup(){
+  eval parsed_path=$2
+  echo "set target_library [list ]" >> $1
+  for pvt in "${@:3}"; do
+    echo "reading $parsed_path with $pvt"
+    while IFS= read -r line; do
+      if [[ -n $line ]]; then
+        echo "set target_library [concat $line \$target_library ]" >> $1
+      fi
+    done < <(find $parsed_path -path $pvt)
+  done
+  echo "set link_library [concat * \$target_library ]" >> $1
+}
 if [[ "$#" -eq 3 && "${1,,}" == "rtl" ]]; then
   echo '' > $3
   rtl $2 $3
@@ -183,13 +196,19 @@ elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
   echo '' > $4
   merge $2 $3 $4
   sed -i '/^[[:space:]]*$/d' $4
+elif [[ "${1,,}" == "synopsys_setup" ]]; then
+  echo "write to $2"
+  echo '' > $2
+  synopsys_setup "${@:2}"
+  sed -i '/^[[:space:]]*$/d' $2
 else
   echo "filelist  "
-  echo "    rtl        <root directory>       <output file list>                                   "
-  echo "    tb         <root directory>       <output file list>                                   "
-  echo "    split      <input file list>      <output file list>            <output include list>  "
-  echo "    vivado     <input file list>      <output vivado read tcl>                             "
-  echo "    quartus    <input file list>      <output quartus read tcl>                            "
-  echo "    yosys      <input file list>      <output yosys read script>                           "
-  echo "    merge      <input include list>   <input file list>             <output file list>     "
+  echo "    rtl              <root directory>       <output file list>                                       "
+  echo "    tb               <root directory>       <output file list>                                       "
+  echo "    split            <input file list>      <output file list>            <output include list>      "
+  echo "    vivado           <input file list>      <output vivado read tcl>                                 "
+  echo "    quartus          <input file list>      <output quartus read tcl>                                "
+  echo "    yosys            <input file list>      <output yosys read script>                               "
+  echo "    merge            <input include list>   <input file list>             <output file list>         "
+  echo "    synopsys_setup   <output tcl script>    <lib directory>               <pvts ...>                 "
 fi
