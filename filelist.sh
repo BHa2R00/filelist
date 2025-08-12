@@ -153,18 +153,57 @@ merge(){
     fi
   done < <(cat $parsed_path)
 }
-synopsys_setup(){
+db_lib(){
   eval parsed_path=$2
+  echo "sh rm -rfv dc_work" >> $1
+  echo "define_design_lib WORK -path dc_work" >> $1
+  echo "set command_log_file \"dc_work.log\"" >> $1
   echo "set target_library [list ]" >> $1
   for pvt in "${@:3}"; do
     echo "reading $parsed_path with $pvt"
     while IFS= read -r line; do
       if [[ -n $line ]]; then
-        echo "set target_library [concat $line \$target_library ]" >> $1
+	      if ! grep "${line##*/}" $1; then
+          echo "target_library $line"
+          echo "set target_library [concat $line \$target_library ]" >> $1
+		    fi
       fi
     done < <(find $parsed_path -path $pvt)
   done
   echo "set link_library [concat * \$target_library ]" >> $1
+}
+mw_lib(){
+  eval parsed_path=$2
+  echo "sh rm -rfv icc_work.mw" >> $1
+  echo "set mw_reference_library [list ]" >> $1
+  echo "reading $parsed_path"
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      line1=${line//FRAM/}
+      echo "mw_reference_library $line1"
+      echo "set mw_reference_library [concat $line1 \$mw_reference_library ]" >> $1
+    fi
+  done < <(find $parsed_path -path '*/FRAM')
+  for tf in "${@:3}"; do
+    while IFS= read -r line; do
+      if [[ -n $line ]]; then
+	      if ! grep "${line##*/}" $1; then
+          echo "technology $line"
+          echo "set technology $line" >> $1
+		    fi
+      fi
+    done < <(find $parsed_path -path $tf)
+  done
+  echo "create_mw_lib -technology \$technology -mw_reference_library \$mw_reference_library icc_work.mw" >> $1
+  echo "open_mw_lib icc_work.mw" >> $1
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+	    if ! grep "${line##*/}" $1; then
+        echo "antenna $line"
+        echo "source $line" >> $1
+	    fi
+    fi
+  done < <(find $parsed_path -name '*ant*.tcl')
 }
 if [[ "$#" -eq 3 && "${1,,}" == "rtl" ]]; then
   echo '' > $3
@@ -196,19 +235,25 @@ elif [[ "$#" -eq 4 && "${1,,}" == "merge" ]]; then
   echo '' > $4
   merge $2 $3 $4
   sed -i '/^[[:space:]]*$/d' $4
-elif [[ "${1,,}" == "synopsys_setup" ]]; then
+elif [[ "${1,,}" == "db_lib" ]]; then
   echo "write to $2"
-  echo '' > $2
-  synopsys_setup "${@:2}"
+  echo "# filelist.sh ${@:1}" > $2
+  db_lib "${@:2}"
+  sed -i '/^[[:space:]]*$/d' $2
+elif [[ "${1,,}" == "mw_lib" ]]; then
+  echo "write to $2"
+  echo "# filelist.sh ${@:1}" > $2
+  mw_lib "${@:2}"
   sed -i '/^[[:space:]]*$/d' $2
 else
-  echo "filelist  "
-  echo "    rtl              <root directory>       <output file list>                                       "
-  echo "    tb               <root directory>       <output file list>                                       "
-  echo "    split            <input file list>      <output file list>            <output include list>      "
-  echo "    vivado           <input file list>      <output vivado read tcl>                                 "
-  echo "    quartus          <input file list>      <output quartus read tcl>                                "
-  echo "    yosys            <input file list>      <output yosys read script>                               "
-  echo "    merge            <input include list>   <input file list>             <output file list>         "
-  echo "    synopsys_setup   <output tcl script>    <lib directory>               <pvts ...>                 "
+  echo "filelist.sh                                                                                  "
+  echo "    rtl        <root directory>       <output file list>                                     "
+  echo "    tb         <root directory>       <output file list>                                     "
+  echo "    split      <input file list>      <output file list>            <output include list>    "
+  echo "    vivado     <input file list>      <output vivado read tcl>                               "
+  echo "    quartus    <input file list>      <output quartus read tcl>                              "
+  echo "    yosys      <input file list>      <output yosys read script>                             "
+  echo "    merge      <input include list>   <input file list>             <output file list>       "
+  echo "    db_lib     <output tcl script>    <lib directory>               <pvts ...>               "
+  echo "    mw_lib     <output tcl script>    <lib directory>               <tech pattern ...>       "
 fi
