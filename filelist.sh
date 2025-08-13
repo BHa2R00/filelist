@@ -184,7 +184,7 @@ mw_lib(){
       echo "set mw_reference_library [concat $line1 \$mw_reference_library ]" >> $1
     fi
   done < <(find $parsed_path -path '*/FRAM')
-  for tf in "${@:3}"; do
+  for pm in "${@:3}"; do
     while IFS= read -r line; do
       if [[ -n $line ]]; then
 	      if ! grep "${line##*/}" $1; then
@@ -192,7 +192,7 @@ mw_lib(){
           echo "set technology $line" >> $1
 		    fi
       fi
-    done < <(find $parsed_path -path $tf)
+    done < <(find $parsed_path -path "$pm.tf")
   done
   echo "create_mw_lib -technology \$technology -mw_reference_library \$mw_reference_library icc_work.mw" >> $1
   echo "open_mw_lib icc_work.mw" >> $1
@@ -204,6 +204,40 @@ mw_lib(){
 	    fi
     fi
   done < <(find $parsed_path -name '*ant*.tcl')
+  echo "set stdcell_filler [list ]" >> $1
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      line1="${line##*/}"
+	    if ! grep $line1 $1; then
+        echo "stdcell_filler $line1 " 
+        echo "set stdcell_filler [concat $line1 \$stdcell_filler ]" >> $1
+      fi
+    fi
+  done < <(find $parsed_path -path '*FRAM/*FIL*' | sed 's/^.*FRAM\/\(.*\):.*$/\1/')
+}
+lib2db(){
+  eval path1=$1
+  eval path2=$2
+  echo "convert $path1 to $path2"
+  #
+lc_shell << EOF > /dev/null 
+read_lib $path1 -no_warnings 
+set lib_objects [get_lib *]
+set lib_names [get_attr \$lib_objects name]
+set lib_name [lindex \$lib_names 0]
+write_lib -format db -output $path2 \$lib_name
+exit
+EOF
+  #
+}
+libs2dbs(){
+  eval parsed_path=$1
+  while IFS= read -r line; do
+    if [[ -n $line ]]; then
+      line1="${line%.lib}.db"
+      lib2db $line $line1
+    fi
+  done < <(find $parsed_path -name $2)
 }
 if [[ "$#" -eq 3 && "${1,,}" == "rtl" ]]; then
   echo '' > $3
@@ -245,6 +279,10 @@ elif [[ "${1,,}" == "mw_lib" ]]; then
   echo "# filelist.sh ${@:1}" > $2
   mw_lib "${@:2}"
   sed -i '/^[[:space:]]*$/d' $2
+elif [[ "${1,,}" == "lib2db" ]]; then
+  lib2db "${@:2}"
+elif [[ "${1,,}" == "libs2dbs" ]]; then
+  libs2dbs "${@:2}"
 else
   echo "filelist.sh                                                                                  "
   echo "    rtl        <root directory>       <output file list>                                     "
@@ -256,4 +294,6 @@ else
   echo "    merge      <input include list>   <input file list>             <output file list>       "
   echo "    db_lib     <output tcl script>    <lib directory>               <pvts ...>               "
   echo "    mw_lib     <output tcl script>    <lib directory>               <tech pattern ...>       "
+  echo "    lib2db     <input liberty>        <output synopsys db>                                   "
+  echo "    libs2dbs   <root directory>       <pattern>                                              "
 fi
